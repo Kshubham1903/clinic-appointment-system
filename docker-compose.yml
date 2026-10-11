@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:6.0
+    container_name: clinic_mongo
+    restart: always
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - clinic-network
+
+  backend:
+    image: <your-dockerhub-username>/clinic-backend:latest
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: clinic_backend
+    restart: always
+    environment:
+      PORT: 5000
+      MONGO_URI: mongodb://mongodb:27017/clinic_appointment_db
+    depends_on:
+      - mongodb
+    networks:
+      - clinic-network
+
+  frontend:
+    image: <your-dockerhub-username>/clinic-frontend:latest
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: clinic_frontend
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - clinic-network
+
+volumes:
+  mongo_data:
+
+networks:
+  clinic-network:
+    driver: bridge
