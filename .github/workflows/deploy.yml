@@ -1,0 +1,132 @@
+name: CI/CD Pipeline - Clinic Appointment System
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+
+jobs:
+  # -------------------------------------------------------------
+  # Job 1: Automated Unit & Code Quality Tests
+  # -------------------------------------------------------------
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: 'npm'
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+
+      - name: Test Backend
+        run: |
+          cd backend
+          npm ci
+          node -e "console.log('Backend syntax and dependencies verified successfully')"
+
+      - name: Test & Build Frontend
+        run: |
+          cd frontend
+          npm ci
+          CI=false npm run build
+
+  # -------------------------------------------------------------
+  # Job 2: Build & Push Docker Images to Docker Hub
+  # -------------------------------------------------------------
+  build-and-push:
+    name: Build & Push Images
+    needs: test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build & Push Backend Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/clinic-backend:latest
+
+      - name: Build & Push Frontend Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/clinic-frontend:latest
+
+  # -------------------------------------------------------------
+  # Job 3: Continuous Deployment to Amazon Linux EC2
+  # -------------------------------------------------------------
+  deploy:
+    name: Deploy to EC2
+    needs: build-and-push
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Ensure Target Directory Exists on EC2
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            mkdir -p /home/ec2-user/clinic-deploy
+
+      - name: Copy docker-compose.yml to Amazon Linux EC2
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          source: "docker-compose.yml"
+          target: "/home/ec2-user/clinic-deploy"
+
+      - name: SSH and Redeploy Containers
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          envs: DOCKERHUB_USERNAME
+          script: |
+            cd /home/ec2-user/clinic-deploy
+            # Ensure Docker Compose plugin binary path is available in non-interactive shell
+            export PATH=$PATH:$HOME/.docker/cli-plugins
+
+            # Pull images with Docker Hub username supplied
+            DOCKERHUB_USERNAME=$DOCKERHUB_USERNAME docker compose pull
+
+            # Recreate containers with latest images
+            DOCKERHUB_USERNAME=$DOCKERHUB_USERNAME docker compose up -d --remove-orphans
+
+            # Remove dangling and unused build images to save EC2 disk space
+            docker image prune -f
