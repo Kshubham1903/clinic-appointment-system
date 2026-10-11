@@ -1,6 +1,12 @@
 name: CI/CD Pipeline - Clinic Appointment System
 
 on:
+  # 1. Triggers when any developer opens or updates a Pull Request targeting main
+  pull_request:
+    branches:
+      - main
+
+  # 2. Triggers when the GitHub Engineer merges the PR into main
   push:
     branches:
       - main
@@ -10,10 +16,10 @@ env:
 
 jobs:
   # -------------------------------------------------------------
-  # Job 1: Automated Unit & Code Quality Tests
+  # Job 1: Test & Code Verification (Runs on EVERY PR and Merge)
   # -------------------------------------------------------------
   test:
-    name: Run Tests
+    name: Run Tests & Verification
     runs-on: ubuntu-latest
 
     steps:
@@ -42,11 +48,13 @@ jobs:
           CI=false npm run build
 
   # -------------------------------------------------------------
-  # Job 2: Build & Push Docker Images to Docker Hub
+  # Job 2: Build & Push Images (Runs ONLY after merge into main)
   # -------------------------------------------------------------
   build-and-push:
     name: Build & Push Images
     needs: test
+    # Condition: Skip if it is an open PR; only run when merged/pushed into main
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
 
     steps:
@@ -79,17 +87,16 @@ jobs:
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/clinic-frontend:latest
 
   # -------------------------------------------------------------
-  # Job 3: Continuous Deployment to Amazon Linux EC2
+  # Job 3: Continuous Deployment (Runs ONLY after merge into main)
   # -------------------------------------------------------------
   deploy:
-    name: Deploy to EC2
+    name: Deploy to Amazon Linux EC2
     needs: build-and-push
+    # Condition: Only deploy on push/merge to main
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-
       - name: Ensure Target Directory Exists on EC2
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -119,14 +126,12 @@ jobs:
           envs: DOCKERHUB_USERNAME
           script: |
             cd /home/ec2-user/clinic-deploy
-            # Ensure Docker Compose plugin binary path is available in non-interactive shell
+            # Ensure Docker Compose binary is available in PATH
             export PATH=$PATH:$HOME/.docker/cli-plugins
 
-            # Pull images with Docker Hub username supplied
+            # Pull and restart updated containers
             DOCKERHUB_USERNAME=$DOCKERHUB_USERNAME docker compose pull
-
-            # Recreate containers with latest images
             DOCKERHUB_USERNAME=$DOCKERHUB_USERNAME docker compose up -d --remove-orphans
 
-            # Remove dangling and unused build images to save EC2 disk space
+            # Remove old dangling container images
             docker image prune -f
