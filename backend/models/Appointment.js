@@ -10,6 +10,8 @@ const appointmentSchema = new mongoose.Schema(
     patientEmail: {
       type: String,
       required: [true, 'Patient email is required'],
+      trim: true,
+      lowercase: true,
       match: [/\S+@\S+\.\S+/, 'Please provide a valid email'],
     },
     patientPhone: {

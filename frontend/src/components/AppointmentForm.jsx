@@ -1,18 +1,46 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { request, TIME_SLOTS } from '../api';
 
-const AppointmentForm = ({ doctors, onAppointmentCreated }) => {
-  const [formData, setFormData] = useState({
-    patientName: '',
-    patientEmail: '',
-    patientPhone: '',
-    doctor: '',
-    appointmentDate: '',
-    timeSlot: '09:00 AM - 10:00 AM',
-    symptoms: '',
-  });
+const emptyForm = {
+  patientName: '',
+  patientEmail: '',
+  patientPhone: '',
+  doctor: '',
+  appointmentDate: '',
+  timeSlot: TIME_SLOTS[0],
+  symptoms: '',
+};
 
+const AppointmentForm = ({ doctors, onAppointmentCreated, title = 'Book Appointment' }) => {
+  const [formData, setFormData] = useState(emptyForm);
+  const [bookedSlots, setBookedSlots] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  const { doctor, appointmentDate } = formData;
+
+  // Load the slots already taken for the chosen doctor and date.
+  useEffect(() => {
+    if (!doctor || !appointmentDate) {
+      setBookedSlots([]);
+      return;
+    }
+    let cancelled = false;
+    request(`/appointments/slots?doctor=${doctor}&date=${appointmentDate}`)
+      .then((res) => !cancelled && setBookedSlots(res.data))
+      .catch(() => !cancelled && setBookedSlots([]));
+    return () => {
+      cancelled = true;
+    };
+  }, [doctor, appointmentDate]);
+
+  // Move off a slot that has just become unavailable.
+  useEffect(() => {
+    if (bookedSlots.includes(formData.timeSlot)) {
+      const free = TIME_SLOTS.find((s) => !bookedSlots.includes(s));
+      setFormData((f) => ({ ...f, timeSlot: free || '' }));
+    }
+  }, [bookedSlots, formData.timeSlot]);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -24,27 +52,12 @@ const AppointmentForm = ({ doctors, onAppointmentCreated }) => {
     setError('');
 
     try {
-      const response = await fetch('http://localhost:5000/api/appointments', {
+      const data = await request('/appointments', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
       });
-
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to book appointment');
-      }
-
       onAppointmentCreated(data.data);
-      setFormData({
-        patientName: '',
-        patientEmail: '',
-        patientPhone: '',
-        doctor: '',
-        appointmentDate: '',
-        timeSlot: '09:00 AM - 10:00 AM',
-        symptoms: '',
-      });
+      setFormData(emptyForm);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -54,8 +67,8 @@ const AppointmentForm = ({ doctors, onAppointmentCreated }) => {
 
   return (
     <div className="card">
-      <h2>Book Appointment</h2>
-      {error && <p style={{ color: '#dc3545', marginBottom: '12px', fontSize: '0.85rem' }}>{error}</p>}
+      <h2>{title}</h2>
+      {error && <p className="error-text">{error}</p>}
       <form onSubmit={handleSubmit}>
         <div className="form-group">
           <label>Patient Full Name</label>
@@ -93,7 +106,9 @@ const AppointmentForm = ({ doctors, onAppointmentCreated }) => {
         <div className="form-group">
           <label>Consulting Doctor</label>
           <select name="doctor" value={formData.doctor} onChange={handleChange} required>
-            <option value="">Select Doctor</option>
+            <option value="">
+              {doctors.length === 0 ? 'No doctors available yet' : 'Select Doctor'}
+            </option>
             {doctors.map((doc) => (
               <option key={doc._id} value={doc._id}>
                 Dr. {doc.name} ({doc.specialization}) - ₹{doc.consultationFee}
@@ -115,12 +130,13 @@ const AppointmentForm = ({ doctors, onAppointmentCreated }) => {
 
         <div className="form-group">
           <label>Time Slot</label>
-          <select name="timeSlot" value={formData.timeSlot} onChange={handleChange}>
-            <option value="09:00 AM - 10:00 AM">09:00 AM - 10:00 AM</option>
-            <option value="10:00 AM - 11:00 AM">10:00 AM - 11:00 AM</option>
-            <option value="11:00 AM - 12:00 PM">11:00 AM - 12:00 PM</option>
-            <option value="02:00 PM - 03:00 PM">02:00 PM - 03:00 PM</option>
-            <option value="03:00 PM - 04:00 PM">03:00 PM - 04:00 PM</option>
+          <select name="timeSlot" value={formData.timeSlot} onChange={handleChange} required>
+            {TIME_SLOTS.map((slot) => (
+              <option key={slot} value={slot} disabled={bookedSlots.includes(slot)}>
+                {slot}
+                {bookedSlots.includes(slot) ? ' (booked)' : ''}
+              </option>
+            ))}
           </select>
         </div>
 
@@ -134,7 +150,7 @@ const AppointmentForm = ({ doctors, onAppointmentCreated }) => {
           ></textarea>
         </div>
 
-        <button type="submit" className="submit-btn" disabled={loading}>
+        <button type="submit" className="submit-btn" disabled={loading || !formData.timeSlot}>
           {loading ? 'Processing...' : 'Confirm Appointment'}
         </button>
       </form>
