@@ -1,89 +1,23 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Navbar from './components/Navbar';
-import AppointmentForm from './components/AppointmentForm';
-import AppointmentList from './components/AppointmentList';
+import PatientPage from './pages/PatientPage';
+import DoctorPage from './pages/DoctorPage';
+import AdminPage from './pages/AdminPage';
 import './App.css';
 
-const API_BASE = 'http://localhost:5000/api';
-
 function App() {
-  const [doctors, setDoctors] = useState([]);
-  const [appointments, setAppointments] = useState([]);
-
-  useEffect(() => {
-    fetchDoctors();
-    fetchAppointments();
-  }, []);
-
-  const fetchDoctors = async () => {
-    try {
-      const res = await fetch(`${API_BASE}/doctors`);
-      const data = await res.json();
-      if (data.success) {
-        setDoctors(data.data);
-      }
-    } catch (err) {
-      console.error('Error fetching doctors:', err);
-    }
-  };
-
-  const fetchAppointments = async () => {
-    try {
-      const res = await fetch(`${API_BASE}/appointments`);
-      const data = await res.json();
-      if (data.success) {
-        setAppointments(data.data);
-      }
-    } catch (err) {
-      console.error('Error fetching appointments:', err);
-    }
-  };
-
-  const handleAppointmentCreated = (newAppointment) => {
-    setAppointments([newAppointment, ...appointments]);
-  };
-
-  const handleStatusUpdate = async (id, status) => {
-    try {
-      const res = await fetch(`${API_BASE}/appointments/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setAppointments(appointments.map((a) => (a._id === id ? data.data : a)));
-      }
-    } catch (err) {
-      console.error('Error updating status:', err);
-    }
-  };
-
-  const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure you want to remove this appointment?')) return;
-    try {
-      const res = await fetch(`${API_BASE}/appointments/${id}`, { method: 'DELETE' });
-      const data = await res.json();
-      if (data.success) {
-        setAppointments(appointments.filter((a) => a._id !== id));
-      }
-    } catch (err) {
-      console.error('Error deleting appointment:', err);
-    }
-  };
-
   return (
-    <div>
+    <BrowserRouter>
       <Navbar />
-      <main className="container">
-        <AppointmentForm doctors={doctors} onAppointmentCreated={handleAppointmentCreated} />
-        <AppointmentList
-          appointments={appointments}
-          onStatusUpdate={handleStatusUpdate}
-          onDelete={handleDelete}
-        />
-      </main>
-    </div>
+      <Routes>
+        <Route path="/" element={<Navigate to="/patient" replace />} />
+        <Route path="/patient" element={<PatientPage />} />
+        <Route path="/doctor" element={<DoctorPage />} />
+        <Route path="/admin" element={<AdminPage />} />
+        <Route path="*" element={<Navigate to="/patient" replace />} />
+      </Routes>
+    </BrowserRouter>
   );
 }
 

@@ -120,3 +120,128 @@ body {
 .action-btn.delete {
   color: #dc3545;
 }
+
+/* Layout helpers for the Patient / Doctor / Admin pages */
+.container {
+  align-items: start;
+}
+
+.container.single {
+  grid-template-columns: 1fr;
+}
+
+.stack {
+  display: grid;
+  gap: 24px;
+  align-content: start;
+}
+
+.nav-links {
+  display: flex;
+  gap: 8px;
+}
+
+.nav-links a {
+  color: white;
+  text-decoration: none;
+  padding: 6px 14px;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+.nav-links a:hover {
+  background-color: rgba(255, 255, 255, 0.15);
+}
+
+.nav-links a.active {
+  background-color: white;
+  color: #0b5ed7;
+  font-weight: 600;
+}
+
+.error-text {
+  color: #dc3545;
+  margin-bottom: 12px;
+  font-size: 0.85rem;
+}
+
+.muted {
+  color: #6c757d;
+  font-size: 0.8rem;
+}
+
+.sub-heading {
+  margin: 24px 0 12px;
+  font-size: 1rem;
+}
+
+.day-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.day-option {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 400 !important;
+  margin-bottom: 0 !important;
+}
+
+.day-option input {
+  width: auto;
+}
+
+.doctor-list {
+  list-style: none;
+}
+
+.doctor-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid #e9ecef;
+  font-size: 0.9rem;
+}
+
+.inline-form {
+  display: flex;
+  gap: 8px;
+}
+
+.inline-form input {
+  flex: 1;
+  padding: 9px 12px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+}
+
+.inline-form .submit-btn {
+  width: auto;
+  padding: 9px 20px;
+}
+
+.stats {
+  display: flex;
+  gap: 16px;
+}
+
+.stat {
+  flex: 1;
+  background: #f4f6f9;
+  border-radius: 8px;
+  padding: 12px;
+  text-align: center;
+}
+
+.stat strong {
+  display: block;
+  font-size: 1.5rem;
+}
+
+.stat span {
+  font-size: 0.8rem;
+  color: #6c757d;
+}
