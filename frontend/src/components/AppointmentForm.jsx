@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { API_BASE } from '../api';
 
 const AppointmentForm = ({ doctors, onAppointmentCreated }) => {
   const [formData, setFormData] = useState({
@@ -24,7 +25,7 @@ const AppointmentForm = ({ doctors, onAppointmentCreated }) => {
     setError('');
 
     try {
-      const response = await fetch('http://localhost:5000/api/appointments', {
+      const response = await fetch(`${API_BASE}/appointments`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
@@ -94,6 +95,7 @@ const AppointmentForm = ({ doctors, onAppointmentCreated }) => {
           <label>Consulting Doctor</label>
           <select name="doctor" value={formData.doctor} onChange={handleChange} required>
             <option value="">Select Doctor</option>
+            <option value="">Shubham</option>
             {doctors.map((doc) => (
               <option key={doc._id} value={doc._id}>
                 Dr. {doc.name} ({doc.specialization}) - ₹{doc.consultationFee}

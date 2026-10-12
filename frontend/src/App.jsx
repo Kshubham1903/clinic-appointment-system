@@ -2,9 +2,8 @@ import React, { useState, useEffect } from 'react';
 import Navbar from './components/Navbar';
 import AppointmentForm from './components/AppointmentForm';
 import AppointmentList from './components/AppointmentList';
+import { API_BASE } from './api';
 import './App.css';
-
-const API_BASE = 'http://localhost:5000/api';
 
 function App() {
   const [doctors, setDoctors] = useState([]);
