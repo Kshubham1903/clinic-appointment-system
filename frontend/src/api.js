@@ -1,4 +1,4 @@
-export const API_BASE = '/api';
+export const API_BASE = 'http://localhost:5000/api';
 
 export const TIME_SLOTS = [
   '09:00 AM - 10:00 AM',
