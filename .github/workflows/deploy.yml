@@ -97,6 +97,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # Step Added: Must check out the repository so docker-compose.yml exists for SCP
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
       - name: Ensure Target Directory Exists on EC2
         uses: appleboy/ssh-action@v1.0.3
         with:
