@@ -1,4 +1,4 @@
-# Stage 1: Build the React Application
+# Stage 1: Build the React application
 FROM node:18-alpine AS builder
 
 WORKDIR /app
@@ -9,13 +9,12 @@ RUN npm ci
 COPY . .
 RUN npm run build
 
-# Stage 2: Serve with lightweight Nginx
+# Stage 2: Serve the production build using Nginx
 FROM nginx:alpine
 
-# Copy custom Nginx reverse proxy configuration
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-# Copy production build from Stage 1
+# Copy the actual build output
 COPY --from=builder /app/build /usr/share/nginx/html
 
 EXPOSE 80
