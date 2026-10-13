@@ -1,5 +1,5 @@
 # Use minimal LTS Node image
-FROM node:18-alpine
+FROM node:22-alpine
 
 # Set working directory inside container
 WORKDIR /app
